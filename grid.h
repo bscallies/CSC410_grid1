@@ -5,11 +5,19 @@ typedef struct {
     int rows;
     int cols;
     int** grid;
+    int high_number;
+    int generations;
+    int seed;
 } Grid;
 
-void initialize_grid(Grid* g, int rows, int cols);
-void fill_grid(Grid* g, int seed, int high);
-void print_grid(Grid* g);
+void allocate_grid(Grid* g);
+void fillGrid(Grid* g);
+int sum_neighbors(Grid* g, int i, int j);
+int update_cell_value(int currentValue, int sum);
 void update_grid(Grid* g);
+void print_grid(Grid* g);
+void free_grid(Grid* g);
+void print_parameters(const Grid* g);
+
 
 #endif // GRID_H
