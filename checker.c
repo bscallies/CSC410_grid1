@@ -1,5 +1,7 @@
 #include "checker.h"
 #include <unistd.h>
+//Brian S. Callies
+//CSC410
 
 int sum_neighbors(Grid* g, int i, int j, int* checks) {
     int sum = 0;

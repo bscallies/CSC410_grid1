@@ -1,5 +1,8 @@
 #include "grid.h"
 #include <stdio.h>
+#include <pthread.h>
+//Brian S. Callies
+//CSC410
 
 int main() {
     Grid g = {

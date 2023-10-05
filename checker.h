@@ -1,7 +1,8 @@
 #ifndef CHECKER_H
 #define CHECKER_H
-
 #include "grid.h"
+//Brian S. Callies
+//CSC410
 
 // Prototypes for checking functions
 

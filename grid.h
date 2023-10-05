@@ -1,6 +1,7 @@
 #ifndef GRID_H
 #define GRID_H
-
+//Brian S. Callies
+//CSC410
 typedef struct {
     int rows;
     int cols;

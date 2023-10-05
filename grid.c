@@ -2,7 +2,8 @@
 #include "grid.h"
 #include <stdio.h>
 #include <stdlib.h>
-
+//Brian S. Callies
+//CSC410
 
 void allocate_grid(Grid* g) {
     g->grid = (int**)malloc(g->rows * sizeof(int*));
