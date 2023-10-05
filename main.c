@@ -16,6 +16,7 @@ int main() {
 
     printf("Generation 1:\n");
     print_grid(&g);
+    printf("\n");
 
     for (int gen = 2; gen <= g.generations; gen++) {
         printf("Generation %d:\n", gen);

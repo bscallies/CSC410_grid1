@@ -12,7 +12,7 @@ typedef struct {
 
 void allocate_grid(Grid* g);
 void fillGrid(Grid* g);
-int sum_neighbors(Grid* g, int i, int j);
+//int sum_neighbors(Grid* g, int i, int j, int* checks);
 int update_cell_value(int currentValue, int sum);
 void update_grid(Grid* g);
 void print_grid(Grid* g);

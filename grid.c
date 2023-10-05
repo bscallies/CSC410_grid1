@@ -1,6 +1,8 @@
+#include "checker.h"
 #include "grid.h"
 #include <stdio.h>
 #include <stdlib.h>
+
 
 void allocate_grid(Grid* g) {
     g->grid = (int**)malloc(g->rows * sizeof(int*));
@@ -17,18 +19,22 @@ void fillGrid(Grid* g) {
         }
     }
 }
-
-int sum_neighbors(Grid* g, int i, int j) {
+/*
+int sum_neighbors(Grid* g, int i, int j, int* checks) {
     int sum = 0;
+    *checks = 0;
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             if (i + dx >= 0 && i + dx < g->rows && j + dy >= 0 && j + dy < g->cols) {
                 sum += g->grid[i + dx][j + dy];
+                (*checks)++;
             }
         }
     }
+
+    usleep(sum % 11 * 1500); //checker
     return sum;
-} //NEW
+}*/
 
 int update_cell_value(int currentValue, int sum) {
     if (sum % 10 == 0) {
@@ -44,10 +50,13 @@ int update_cell_value(int currentValue, int sum) {
 
 void update_grid(Grid* g) {
     int temp[g->rows][g->cols];
+    int checks = 0;
+    int total_checks = 0;  // Keep track of total checks
 
     for (int i = 0; i < g->rows; i++) {
         for (int j = 0; j < g->cols; j++) {
-            int sum = sum_neighbors(g, i, j);
+            int sum = sum_neighbors(g, i, j, &checks);
+            total_checks += checks;
             temp[i][j] = update_cell_value(g->grid[i][j], sum);
         }
     }

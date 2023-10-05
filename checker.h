@@ -3,6 +3,9 @@
 
 #include "grid.h"
 
-void checker(Grid* g);
+// Prototypes for checking functions
 
-#endif // CHECKER_H
+int sum_neighbors(Grid* g, int i, int j, int* checks);
+void delay_based_on_sum(int sum);
+
+#endif
