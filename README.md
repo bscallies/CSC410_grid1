@@ -37,7 +37,25 @@ Include comments and explanations in your report.
 Be prepared to provide code fragments, specific data values from the grid at specific times & locations, as mentioned in the requirements.
 General Tips:
 
-Use version control (like Git) if you aren't already. This allows you to keep track of changes, experiment without fear, and revert back if something goes wrong.
-Test often. After every major change, ensure your code runs without errors and gives expected outputs.
-Backup your work. In addition to version control, regularly backup your work in a secondary location.
-Given the above breakdown, I would recommend starting with organizing your files and setting up the base grid correctly. Once that's in place, you can begin adding the additional features and requirements one at a time. Always test as you go along to ensure that each added feature works as expected.
+=Open MP=
+Your code should have sections that differentiate between static and dynamic scheduling, and it should be easy to adjust the number of threads.
+Reporting: Prepare an overall timing table comparing the runtime for all versions: sequential, pthread (static and dynamic with 4 and 12 threads), and OpenMP (static and dynamic with 4 and 12 threads).
+Include comments and explanations in your report.
+Be prepared to provide code fragments, specific data values from the grid at specific times & locations, as mentioned in the requirements.
+General Tips:
+
+Directive-Based Approach: OpenMP uses a directive-based approach to parallelism. By adding special compiler directives (pragmas) to your code, you can instruct the compiler where and how to parallelize operations. This means you can start with serial code and then incrementally parallelize it using OpenMP directives.
+
+Shared Memory Model: OpenMP is designed for multi-threaded programming on systems with shared memory. This is different from distributed memory systems where each processor has its own local memory.
+
+Portability: OpenMP is supported by many compilers and platforms, making it relatively portable. Programs written using OpenMP can be compiled for different systems without changing the source code.
+
+Scalability: OpenMP programs can be scaled by simply increasing the number of threads. The same code can run on a single-core machine (using one thread) or a multi-core machine with several threads.
+
+Key Features:
+
+Loop Parallelism: Easily parallelize loops to run on multiple threads.
+Task Parallelism: Define standalone parallel tasks.
+Data Environment: Control data scope (private, shared) and data handling (reduction operations).
+Synchronization: Use critical sections, barriers, and locks to synchronize threads.
+Runtime Library: OpenMP provides a runtime library that allows querying and setting runtime properties, like the number of threads.
