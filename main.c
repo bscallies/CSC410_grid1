@@ -40,6 +40,7 @@ int parallel_update_grid(Grid* g, int numThreads);
 int total_checks(WorkUnit* workUnits, int numThreads);
 
 void initialize(Grid* g, WorkUnit* work_units, int numThreads) {
+
     allocate_grid(g);
     fillGrid(g);
     print_parameters(g);
@@ -63,6 +64,9 @@ void initialize(Grid* g, WorkUnit* work_units, int numThreads) {
 }
 
 int main() {
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
     Grid g = {
             .rows = 12,
             .cols = 20,
@@ -72,13 +76,9 @@ int main() {
             .seed = 2
     };
 
-    if (pthread_key_create(&thread_id_key, NULL) != 0) {
-        printf("Error creating thread-specific key.\n");
-        return 1;  // or handle the error accordingly
-    }
+    if (pthread_key_create(&thread_id_key, NULL) != 0) {printf("Error creating thread-specific key.\n");return 1;}
     int NUM_THREADS = 4; // This can be adjusted as needed
     WorkUnit work_units[NUM_THREADS];
-
     initialize(&g, work_units, NUM_THREADS);
 
     for (int gen = 2; gen <= g.generations; gen++) {
@@ -87,8 +87,13 @@ int main() {
 
         print_grid(&g);
         printf("\n");
+        //printf("DEBUG: Total checks: %d\n", total_checks(work_units, NUM_THREADS));
         printf("Total checks: %d\n", total_checks(work_units, NUM_THREADS));
     }
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("Time taken: %f seconds\n", cpu_time_used);
+
     free_grid(&g);
     pthread_key_delete(thread_id_key);
     return 0;
@@ -126,7 +131,7 @@ void delay_based_on_sum(int sum) {
 int total_checks(WorkUnit* workUnits, int numThreads) {
     int total = 0;
     for (int i = 0; i < numThreads; i++) {
-        printf("DEBUG: Thread %d checks: %d\n\n", i, workUnits[i].checks);
+        //printf("DEBUG: Thread %d checks: %d\n\n", i, workUnits[i].checks);
         total += workUnits[i].checks;
     }
     return total;
