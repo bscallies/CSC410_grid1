@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdatomic.h>
+#include <time.h>
+
 //Brian S. Callies
 //CSC410
 typedef struct {
@@ -20,7 +22,9 @@ typedef struct {
     Grid* g;      // Pointer to the main grid structure
     //int checks;   // Number of checks made by this thread
     atomic_int checks;
+    int thread_id;
 } WorkUnit;
+pthread_key_t thread_id_key;
 
 //Protofunctions
 void allocate_grid(Grid* g);
@@ -49,6 +53,7 @@ void initialize(Grid* g, WorkUnit* work_units, int numThreads) {
         work_units[t].g = g;
         work_units[t].start = t * cells_per_thread;
         work_units[t].checks = 0; // Initializing checks
+        work_units[t].thread_id = t; //thread id
         if (t == numThreads - 1) {
             work_units[t].end = (g->rows * g->cols) - 1;
         } else {
@@ -67,6 +72,10 @@ int main() {
             .seed = 2
     };
 
+    if (pthread_key_create(&thread_id_key, NULL) != 0) {
+        printf("Error creating thread-specific key.\n");
+        return 1;  // or handle the error accordingly
+    }
     int NUM_THREADS = 4; // This can be adjusted as needed
     WorkUnit work_units[NUM_THREADS];
 
@@ -80,8 +89,8 @@ int main() {
         printf("\n");
         printf("Total checks: %d\n", total_checks(work_units, NUM_THREADS));
     }
-
     free_grid(&g);
+    pthread_key_delete(thread_id_key);
     return 0;
 }
 
@@ -92,11 +101,13 @@ int sum_neighbors(Grid* g, int i, int j, WorkUnit* work) {
 
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
-            if (i + dx >= 0 && i + dx < g->rows && j + dy >= 0 && j + dy < g->cols) {
-                //printf("DEBUG: Checking neighbors for cell (%d, %d)\n", i, j); //debugging line
-                sum += g->grid[i + dx][j + dy];
-                //(*checks)++;
-                //work->checks++;
+            int ni = i + dx;  // neighbor's i-coordinate
+            int nj = j + dy;  // neighbor's j-coordinate
+            if (ni >= 0 && ni < g->rows && nj >= 0 && nj < g->cols && !(dx == 0 && dy == 0)) {
+                int tid = (int)(intptr_t)pthread_getspecific(thread_id_key);
+                //printf("DEBUG: Thread %d - Adding value from neighbor cell (%d, %d) to cell (%d, %d)\n", tid, ni, nj, i, j);
+
+                sum += g->grid[ni][nj];
                 atomic_fetch_add(&work->checks, 1);
             }
         }
@@ -106,6 +117,7 @@ int sum_neighbors(Grid* g, int i, int j, WorkUnit* work) {
     return sum;
 }
 
+
 void delay_based_on_sum(int sum) {
     usleep(sum % 11 * 1500);  // adding the delay here
 }
@@ -114,7 +126,7 @@ void delay_based_on_sum(int sum) {
 int total_checks(WorkUnit* workUnits, int numThreads) {
     int total = 0;
     for (int i = 0; i < numThreads; i++) {
-        printf("DEBUG: Thread %d checks: %d\n", i, workUnits[i].checks);
+        printf("DEBUG: Thread %d checks: %d\n\n", i, workUnits[i].checks);
         total += workUnits[i].checks;
     }
     return total;
@@ -177,6 +189,7 @@ void index_to_2d(int index, int* row, int* col, int cols) {
 
 void* thread_update_grid(void* arg) {
     WorkUnit* work = (WorkUnit*)arg;
+    pthread_setspecific(thread_id_key, (void*)(intptr_t)work->thread_id);
     Grid* g = work->g;
 
     for (int idx = work->start; idx <= work->end; idx++) {  // Changed to 'start' and 'end'
@@ -189,12 +202,12 @@ void* thread_update_grid(void* arg) {
         int sum = sum_neighbors(g, i, j, work);
         g->grid[i][j] = update_cell_value(g->grid[i][j], sum);
     }
-    printf("DEBUG: Thread [%d - %d] performed %d checks\n", work->start, work->end, work->checks);
+    //printf("DEBUG: Thread [%d - %d] performed %d checks\n", work->start, work->end, work->checks);
     pthread_exit(NULL);
 }
 
 int parallel_update_grid(Grid* g, int num_threads) {
-    printf("DEBUG: Starting parallel_update_grid for generation\n");
+    //printf("DEBUG: Starting parallel_update_grid for generation\n");
     pthread_t threads[num_threads];
     WorkUnit work_units[num_threads];
     int cells_per_thread = (g->rows * g->cols) / num_threads;
@@ -208,7 +221,7 @@ int parallel_update_grid(Grid* g, int num_threads) {
         } else {
             work_units[t].end = (t + 1) * cells_per_thread - 1;  // Changed to 'end'
         }
-
+        work_units[t].thread_id = t;
         pthread_create(&threads[t], NULL, thread_update_grid, &work_units[t]);
     }
 
