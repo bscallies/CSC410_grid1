@@ -4,37 +4,6 @@
 #include <unistd.h>
 //Brian S. Callies
 //CSC410
-
-
-//Protofunctions
-void allocate_grid(Grid* g);
-void fillGrid(Grid* g);
-void print_parameters(const Grid* g);
-void print_grid(Grid* g);
-void free_grid(Grid* g);
-int sum_neighbors(Grid* g, int i, int j, WorkUnit* work);
-void delay_based_on_sum(int sum);
-int update_cell_value(int currentValue, int sum);
-//void update_grid(Grid* g);
-void* thread_update_grid(void* arg);
-int parallel_update_grid(Grid* g, int numThreads);
-int total_checks(WorkUnit* workUnits, int numThreads);
-/*
-int sum_neighbors(Grid* g, int i, int j, WorkUnit* work);
-void delay_based_on_sum(int sum);
-int total_checks(WorkUnit* workUnits, int numThreads);
-void allocate_grid(Grid* g);
-void fillGrid(Grid* g);
-//int sum_neighbors(Grid* g, int i, int j, int* checks);
-int update_cell_value(int currentValue, int sum);
-void update_grid(Grid* g);
-void print_grid(Grid* g);
-void free_grid(Grid* g);
-void print_parameters(const Grid* g);
-void* thread_update_grid(void* arg);
-//void parallel_update_grid(Grid* g, int num_threads);
-int parallel_update_grid(Grid* g, int numThreads); */
-
 typedef struct {
     int rows;
     int cols;
@@ -51,6 +20,19 @@ typedef struct {
     int checks;   // Number of checks made by this thread
 } WorkUnit;
 
+//Protofunctions
+void allocate_grid(Grid* g);
+void fillGrid(Grid* g);
+void print_parameters(const Grid* g);
+void print_grid(Grid* g);
+void free_grid(Grid* g);
+void delay_based_on_sum(int sum);
+int sum_neighbors(Grid* g, int i, int j, WorkUnit* work);
+int update_cell_value(int currentValue, int sum);
+void* thread_update_grid(void* arg);
+int parallel_update_grid(Grid* g, int numThreads);
+int total_checks(WorkUnit* workUnits, int numThreads);
+
 int main() {
     Grid g = {
             .rows = 12,
@@ -58,8 +40,8 @@ int main() {
             .grid = NULL,
             .high_number = 20,
             .generations = 10,
-            .seed = 2};
-
+            .seed = 2
+    };
     allocate_grid(&g);
     fillGrid(&g);
     print_parameters(&g);
@@ -70,21 +52,31 @@ int main() {
 
     for (int gen = 2; gen <= g.generations; gen++) {
         printf("Generation %d:\n", gen);
-        //update_grid(&g);
         int NUM_THREADS = 4;  // This can be adjusted as needed
+        int cells_per_thread = (g.rows * g.cols) / NUM_THREADS;
         WorkUnit work_units[NUM_THREADS];
+
+        for (int t = 0; t < NUM_THREADS; t++) {
+            work_units[t].g = &g;
+            work_units[t].start = t * cells_per_thread;
+            if (t == NUM_THREADS - 1) {
+                work_units[t].end = (g.rows * g.cols) - 1;
+            } else {
+                work_units[t].end = (t + 1) * cells_per_thread - 1;
+            }
+            work_units[t].checks = 0;
+        }
+
         parallel_update_grid(&g, NUM_THREADS);
 
         print_grid(&g);
         printf("\n");
-        //printf("Total checks: %d\n", total_checks(workUnits, NUM_THREADS));
         printf("Total checks: %d\n", total_checks(work_units, NUM_THREADS));
-
     }
-
     free_grid(&g);
     return 0;
 }
+
 
 //FUNCTIONS
 //checker.c functions
@@ -145,29 +137,6 @@ int update_cell_value(int currentValue, int sum) {
         return (currentValue - 3 >= 0) ? currentValue - 3 : 0;
     } else {
         return 1;
-    }
-}
-
-void update_grid(Grid* g) {
-    int temp[g->rows][g->cols];
-    int checks = 0;
-    int total_checks = 0;  // Keep track of total checks
-
-    WorkUnit dummy_work; //scheisse work around
-    dummy_work.checks = 0;
-
-    for (int i = 0; i < g->rows; i++) {
-        for (int j = 0; j < g->cols; j++) {
-            int sum = sum_neighbors(g, i, j, &checks);
-            total_checks += checks;
-            temp[i][j] = update_cell_value(g->grid[i][j], sum);
-        }
-    }
-
-    for (int i = 0; i < g->rows; i++) {
-        for (int j = 0; j < g->cols; j++) {
-            g->grid[i][j] = temp[i][j];
-        }
     }
 }
 
