@@ -1,5 +1,8 @@
+#include "checker.h"
 #include "grid.h"
+#include "parallel.h"
 #include <stdio.h>
+//#include <stdlib.h>
 #include <pthread.h>
 //Brian S. Callies
 //CSC410
@@ -23,9 +26,14 @@ int main() {
 
     for (int gen = 2; gen <= g.generations; gen++) {
         printf("Generation %d:\n", gen);
-        update_grid(&g);
+        //update_grid(&g);
+        int NUM_THREADS = 4;  // This can be adjusted as needed
+        parallel_update_grid(&g, NUM_THREADS);
+
         print_grid(&g);
         printf("\n");
+        printf("Total checks: %d\n", total_checks(workUnits, NUM_THREADS));
+
     }
 
     free_grid(&g);

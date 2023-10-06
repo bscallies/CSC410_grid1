@@ -1,5 +1,6 @@
 #include "checker.h"
 #include "grid.h"
+#include "parallel.h"
 #include <stdio.h>
 #include <stdlib.h>
 //Brian S. Callies
