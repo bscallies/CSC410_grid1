@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdatomic.h>
 //Brian S. Callies
 //CSC410
 typedef struct {
@@ -17,7 +18,8 @@ typedef struct {
     int start;    // Start index for this thread's work
     int end;      // End index for this thread's work
     Grid* g;      // Pointer to the main grid structure
-    int checks;   // Number of checks made by this thread
+    //int checks;   // Number of checks made by this thread
+    atomic_int checks;
 } WorkUnit;
 
 //Protofunctions
@@ -33,56 +35,60 @@ void* thread_update_grid(void* arg);
 int parallel_update_grid(Grid* g, int numThreads);
 int total_checks(WorkUnit* workUnits, int numThreads);
 
+void initialize(Grid* g, WorkUnit* work_units, int numThreads) {
+    allocate_grid(g);
+    fillGrid(g);
+    print_parameters(g);
+
+    printf("Generation 1:\n");
+    print_grid(g);
+    printf("\n");
+
+    int cells_per_thread = (g->rows * g->cols) / numThreads;
+    for (int t = 0; t < numThreads; t++) {
+        work_units[t].g = g;
+        work_units[t].start = t * cells_per_thread;
+        work_units[t].checks = 0; // Initializing checks
+        if (t == numThreads - 1) {
+            work_units[t].end = (g->rows * g->cols) - 1;
+        } else {
+            work_units[t].end = (t + 1) * cells_per_thread - 1;
+        }
+    }
+}
+
 int main() {
     Grid g = {
             .rows = 12,
             .cols = 20,
             .grid = NULL,
             .high_number = 20,
-            .generations = 3,//needs to be 10
+            .generations = 3, // needs to be 10
             .seed = 2
     };
-    allocate_grid(&g);
-    fillGrid(&g);
-    print_parameters(&g);
 
-    printf("Generation 1:\n");
-    print_grid(&g);
-    printf("\n");
+    int NUM_THREADS = 4; // This can be adjusted as needed
+    WorkUnit work_units[NUM_THREADS];
+
+    initialize(&g, work_units, NUM_THREADS);
 
     for (int gen = 2; gen <= g.generations; gen++) {
         printf("Generation %d:\n", gen);
-        int NUM_THREADS = 4;  // This can be adjusted as needed
-        int cells_per_thread = (g.rows * g.cols) / NUM_THREADS;
-        WorkUnit work_units[NUM_THREADS];
-
-        for (int t = 0; t < NUM_THREADS; t++) {
-            work_units[t].g = &g;
-            work_units[t].start = t * cells_per_thread;
-            if (t == NUM_THREADS - 1) {
-                work_units[t].end = (g.rows * g.cols) - 1;
-            } else {
-                work_units[t].end = (t + 1) * cells_per_thread - 1;
-            }
-            work_units[t].checks = 0;
-        }
-
         parallel_update_grid(&g, NUM_THREADS);
 
         print_grid(&g);
         printf("\n");
         printf("Total checks: %d\n", total_checks(work_units, NUM_THREADS));
     }
+
     free_grid(&g);
     return 0;
 }
 
-
 //FUNCTIONS
-//checker.c functions
+
 int sum_neighbors(Grid* g, int i, int j, WorkUnit* work) {
     int sum = 0;
-    //*checks = 0;  // Initialize checks
 
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
@@ -90,7 +96,8 @@ int sum_neighbors(Grid* g, int i, int j, WorkUnit* work) {
                 //printf("DEBUG: Checking neighbors for cell (%d, %d)\n", i, j); //debugging line
                 sum += g->grid[i + dx][j + dy];
                 //(*checks)++;
-                work->checks++;
+                //work->checks++;
+                atomic_fetch_add(&work->checks, 1);
             }
         }
     }
