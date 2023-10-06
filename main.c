@@ -39,7 +39,7 @@ int main() {
             .cols = 20,
             .grid = NULL,
             .high_number = 20,
-            .generations = 10,
+            .generations = 3,//needs to be 10
             .seed = 2
     };
     allocate_grid(&g);
@@ -87,6 +87,7 @@ int sum_neighbors(Grid* g, int i, int j, WorkUnit* work) {
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             if (i + dx >= 0 && i + dx < g->rows && j + dy >= 0 && j + dy < g->cols) {
+                //printf("DEBUG: Checking neighbors for cell (%d, %d)\n", i, j); //debugging line
                 sum += g->grid[i + dx][j + dy];
                 //(*checks)++;
                 work->checks++;
@@ -106,6 +107,7 @@ void delay_based_on_sum(int sum) {
 int total_checks(WorkUnit* workUnits, int numThreads) {
     int total = 0;
     for (int i = 0; i < numThreads; i++) {
+        printf("DEBUG: Thread %d checks: %d\n", i, workUnits[i].checks);
         total += workUnits[i].checks;
     }
     return total;
@@ -172,17 +174,20 @@ void* thread_update_grid(void* arg) {
 
     for (int idx = work->start; idx <= work->end; idx++) {  // Changed to 'start' and 'end'
         int i, j;
+        //printf("DEBUG: Thread range: %d to %d\n", work->start, work->end);
+
         index_to_2d(idx, &i, &j, g->cols);
 
         //int sum = sum_neighbors(g, i, j, &work->checks);
         int sum = sum_neighbors(g, i, j, work);
         g->grid[i][j] = update_cell_value(g->grid[i][j], sum);
     }
-
+    printf("DEBUG: Thread [%d - %d] performed %d checks\n", work->start, work->end, work->checks);
     pthread_exit(NULL);
 }
 
 int parallel_update_grid(Grid* g, int num_threads) {
+    printf("DEBUG: Starting parallel_update_grid for generation\n");
     pthread_t threads[num_threads];
     WorkUnit work_units[num_threads];
     int cells_per_thread = (g->rows * g->cols) / num_threads;
