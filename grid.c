@@ -55,6 +55,9 @@ void update_grid(Grid* g) {
     int checks = 0;
     int total_checks = 0;  // Keep track of total checks
 
+    WorkUnit dummy_work; //scheisse work around
+    dummy_work.checks = 0;
+
     for (int i = 0; i < g->rows; i++) {
         for (int j = 0; j < g->cols; j++) {
             int sum = sum_neighbors(g, i, j, &checks);

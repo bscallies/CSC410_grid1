@@ -5,12 +5,15 @@
 #include <pthread.h>
 
 typedef struct {
-    Grid* g;
-    int start_index;
-    int end_index;
+    int start;    // Start index for this thread's work
+    int end;      // End index for this thread's work
+    Grid* g;      // Pointer to the main grid structure
+    int checks;   // Number of checks made by this thread
 } WorkUnit;
 
 void* thread_update_grid(void* arg);
-void parallel_update_grid(Grid* g, int num_threads);
+//void parallel_update_grid(Grid* g, int num_threads);
+int parallel_update_grid(Grid* g, int numThreads);
+
 
 #endif

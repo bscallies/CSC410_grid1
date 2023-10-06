@@ -28,11 +28,13 @@ int main() {
         printf("Generation %d:\n", gen);
         //update_grid(&g);
         int NUM_THREADS = 4;  // This can be adjusted as needed
+        WorkUnit work_units[NUM_THREADS];
         parallel_update_grid(&g, NUM_THREADS);
 
         print_grid(&g);
         printf("\n");
-        printf("Total checks: %d\n", total_checks(workUnits, NUM_THREADS));
+        //printf("Total checks: %d\n", total_checks(workUnits, NUM_THREADS));
+        printf("Total checks: %d\n", total_checks(work_units, NUM_THREADS));
 
     }
 
