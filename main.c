@@ -2,11 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-//#include <stdatomic.h>
 #include <time.h>
-
 //Brian S. Callies
 //CSC410
+
 typedef struct {
     int rows;
     int cols;
@@ -17,15 +16,14 @@ typedef struct {
 } Grid;
 
 typedef struct {
-    int start;    // Start index for this thread's work
-    int end;      // End index for this thread's work
+    int start;    // start index for assigned work to each thread
+    int end;      // end index
     Grid* g;      // Pointer to the main grid structure
     int checks;   // Number of checks made by this thread
-    //atomic_int checks;
     int thread_id;
 } WorkUnit;
 pthread_key_t thread_id_key;
-pthread_mutex_t count_mutex;
+pthread_mutex_t count_mutex; //safe guards threads
 #define MAX_THREADS 12
 
 
@@ -83,42 +81,32 @@ int main() {
 
 //4-thread Static run
     start4 = clock();
-    int NUM_THREADS = 4; // This can be adjusted as needed
+    int NUM_THREADS = 4; //First run
     WorkUnit workUnits[MAX_THREADS];
     pthread_mutex_t count_mutex;
     initialize(&g, workUnits, 4);
 
     for (int gen = 2; gen <= g.generations; gen++) {
         printf("Generation %d with %d threads:\n", gen, NUM_THREADS);
-        //parallel_update_grid(&g, NUM_THREADS);
         parallel_update_grid(&g, workUnits, NUM_THREADS);
-
-
         print_grid(&g);
-        //printf("\n");
-        //printf("DEBUG: Total checks: %d\n", total_checks(work_units, NUM_THREADS));
         printf("Total checks: %d\n\n", total_checks(workUnits, NUM_THREADS));
     }
     end4 = clock();
     cpu_time_used4 = ((double) (end4 - start4)) / CLOCKS_PER_SEC;
     printf("Time taken with %d threads: %f seconds\n", NUM_THREADS, cpu_time_used4);
-    //free(work_units);
 
 //12-thread static run
     start12 = clock();
-    NUM_THREADS = 12; // This can be adjusted as needed
+    NUM_THREADS = 12;
     initialize(&g, workUnits, NUM_THREADS);
     for (int t = 0; t < NUM_THREADS; t++) {
         workUnits[t].checks = 0;
     }
     for (int gen = 2; gen <= g.generations; gen++) {
         printf("Generation %d with %d threads:\n", gen, NUM_THREADS);
-        //parallel_update_grid(&g, NUM_THREADS);
         parallel_update_grid(&g, workUnits, NUM_THREADS);
-
         print_grid(&g);
-        //printf("\n");
-        //printf("DEBUG: Total checks: %d\n", total_checks(work_units, NUM_THREADS));
         printf("Total checks: %d\n\n", total_checks(workUnits, NUM_THREADS));
     }
     end12 = clock();
@@ -160,7 +148,7 @@ void delay_based_on_sum(int sum) {
 int total_checks(WorkUnit* workUnits, int numThreads) {
     int total = 0;
     for (int i = 0; i < numThreads; i++) {
-        printf("DEBUG: Thread %d checks: %d\n", i, workUnits[i].checks);
+        //printf("DEBUG: Thread %d checks: %d\n", i, workUnits[i].checks);
         total += workUnits[i].checks;
     }
     return total;
@@ -247,14 +235,11 @@ void* thread_update_grid(void* arg) {
 int parallel_update_grid(Grid* g, WorkUnit* work_units, int num_threads) {
     //printf("DEBUG: Starting parallel_update_grid for generation\n");
     pthread_t threads[num_threads];
-    //WorkUnit work_units[num_threads];
     int cells_per_thread = (g->rows * g->cols) / num_threads;
 
     for (int t = 0; t < num_threads; t++) {
         work_units[t].g = g;
         work_units[t].start = t * cells_per_thread;  // Changed to 'start'
-        //work_units[t].checks = ATOMIC_VAR_INIT(0);
-
         if (t == num_threads - 1) {
             work_units[t].end = (g->rows * g->cols) - 1;  // Changed to 'end'
         } else {
@@ -262,7 +247,9 @@ int parallel_update_grid(Grid* g, WorkUnit* work_units, int num_threads) {
         }
         work_units[t].thread_id = t;
         pthread_create(&threads[t], NULL, thread_update_grid, &work_units[t]);
-        printf("Thread ID: %d, Start index: %d, End index: %d\n", work_units[t].thread_id, work_units[t].start, work_units[t].end);
+        //printf("Thread ID: %d, Start index: %d, End index: %d\n", work_units[t].thread_id, work_units[t].start, work_units[t].end);
+        printf("Thread ID: %d, Start index: %d, End index: %d, Check count: %d\n",
+               work_units[t].thread_id, work_units[t].start, work_units[t].end, work_units[t].checks);
     }
 
     for (int t = 0; t < num_threads; t++) {
