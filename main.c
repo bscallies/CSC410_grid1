@@ -26,6 +26,8 @@ typedef struct {
 } WorkUnit;
 pthread_key_t thread_id_key;
 pthread_mutex_t count_mutex;
+#define MAX_THREADS 12
+
 
 
 //Protofunctions
@@ -38,7 +40,7 @@ void delay_based_on_sum(int sum);
 int sum_neighbors(Grid* g, int i, int j, WorkUnit* work);
 int update_cell_value(int currentValue, int sum);
 void* thread_update_grid(void* arg);
-int parallel_update_grid(Grid* g, int numThreads);
+int parallel_update_grid(Grid* g, WorkUnit* work_units, int num_threads);
 int total_checks(WorkUnit* workUnits, int numThreads);
 
 void initialize(Grid* g, WorkUnit* work_units, int numThreads) {
@@ -66,8 +68,8 @@ void initialize(Grid* g, WorkUnit* work_units, int numThreads) {
 }
 
 int main() {
-    clock_t start, end;
-    double cpu_time_used;
+    clock_t start4, end4, start12, end12;
+    double cpu_time_used4, cpu_time_used12;
     Grid g = {
             .rows = 12,
             .cols = 20,
@@ -79,49 +81,50 @@ int main() {
 
     if (pthread_key_create(&thread_id_key, NULL) != 0) {printf("Error creating thread-specific key.\n");return 1;}
 
-    start = clock();
+//4-thread Static run
+    start4 = clock();
     int NUM_THREADS = 4; // This can be adjusted as needed
-    //WorkUnit work_units[NUM_THREADS];
-    WorkUnit work_units[12];
+    WorkUnit workUnits[MAX_THREADS];
     pthread_mutex_t count_mutex;
-    initialize(&g, work_units, 4);
+    initialize(&g, workUnits, 4);
 
     for (int gen = 2; gen <= g.generations; gen++) {
         printf("Generation %d with %d threads:\n", gen, NUM_THREADS);
-        parallel_update_grid(&g, NUM_THREADS);
+        //parallel_update_grid(&g, NUM_THREADS);
+        parallel_update_grid(&g, workUnits, NUM_THREADS);
+
 
         print_grid(&g);
         //printf("\n");
         //printf("DEBUG: Total checks: %d\n", total_checks(work_units, NUM_THREADS));
-        printf("Total checks: %d\n\n", total_checks(work_units, NUM_THREADS));
+        printf("Total checks: %d\n\n", total_checks(workUnits, NUM_THREADS));
     }
-    end = clock();
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("Time taken with %d threads: %f seconds\n", NUM_THREADS, cpu_time_used);
-
+    end4 = clock();
+    cpu_time_used4 = ((double) (end4 - start4)) / CLOCKS_PER_SEC;
+    printf("Time taken with %d threads: %f seconds\n", NUM_THREADS, cpu_time_used4);
     //free(work_units);
 
-    start = clock();
+//12-thread static run
+    start12 = clock();
     NUM_THREADS = 12; // This can be adjusted as needed
-    //work_units = malloc(NUM_THREADS * sizeof(WorkUnit));
-
-    initialize(&g, work_units, NUM_THREADS);
+    initialize(&g, workUnits, NUM_THREADS);
     for (int t = 0; t < NUM_THREADS; t++) {
-        work_units[t].checks = 0;
+        workUnits[t].checks = 0;
     }
-
     for (int gen = 2; gen <= g.generations; gen++) {
         printf("Generation %d with %d threads:\n", gen, NUM_THREADS);
-        parallel_update_grid(&g, NUM_THREADS);
+        //parallel_update_grid(&g, NUM_THREADS);
+        parallel_update_grid(&g, workUnits, NUM_THREADS);
 
         print_grid(&g);
         //printf("\n");
         //printf("DEBUG: Total checks: %d\n", total_checks(work_units, NUM_THREADS));
-        printf("Total checks: %d\n\n", total_checks(work_units, NUM_THREADS));
+        printf("Total checks: %d\n\n", total_checks(workUnits, NUM_THREADS));
     }
-    end = clock();
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("Time taken with %d threads: %f seconds\n", NUM_THREADS, cpu_time_used);
+    end12 = clock();
+    cpu_time_used12 = ((double) (end12 - start12)) / CLOCKS_PER_SEC;
+    printf("Time taken with %d threads: %f seconds\n", NUM_THREADS, cpu_time_used4);
+    printf("Time taken with %d threads: %f seconds\n", NUM_THREADS, cpu_time_used12);
 
     //free(work_units);
     free_grid(&g);
@@ -241,16 +244,16 @@ void* thread_update_grid(void* arg) {
     pthread_exit(NULL);
 }
 
-int parallel_update_grid(Grid* g, int num_threads) {
+int parallel_update_grid(Grid* g, WorkUnit* work_units, int num_threads) {
     //printf("DEBUG: Starting parallel_update_grid for generation\n");
     pthread_t threads[num_threads];
-    WorkUnit work_units[num_threads];
+    //WorkUnit work_units[num_threads];
     int cells_per_thread = (g->rows * g->cols) / num_threads;
 
     for (int t = 0; t < num_threads; t++) {
         work_units[t].g = g;
         work_units[t].start = t * cells_per_thread;  // Changed to 'start'
-        work_units[t].checks = ATOMIC_VAR_INIT(0);
+        //work_units[t].checks = ATOMIC_VAR_INIT(0);
 
         if (t == num_threads - 1) {
             work_units[t].end = (g->rows * g->cols) - 1;  // Changed to 'end'
