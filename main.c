@@ -66,34 +66,57 @@ void initialize(Grid* g, WorkUnit* work_units, int numThreads) {
 int main() {
     clock_t start, end;
     double cpu_time_used;
-    start = clock();
     Grid g = {
             .rows = 12,
             .cols = 20,
             .grid = NULL,
             .high_number = 20,
-            .generations = 3, // needs to be 10
+            .generations = 10, // needs to be 10
             .seed = 2
     };
 
     if (pthread_key_create(&thread_id_key, NULL) != 0) {printf("Error creating thread-specific key.\n");return 1;}
+
+    start = clock();
     int NUM_THREADS = 4; // This can be adjusted as needed
-    WorkUnit work_units[NUM_THREADS];
-    initialize(&g, work_units, NUM_THREADS);
+    //WorkUnit work_units[NUM_THREADS];
+    WorkUnit work_units[12];
+    initialize(&g, work_units, 4);
 
     for (int gen = 2; gen <= g.generations; gen++) {
-        printf("Generation %d:\n", gen);
+        printf("Generation %d with %d threads:\n", gen, NUM_THREADS);
         parallel_update_grid(&g, NUM_THREADS);
 
         print_grid(&g);
-        printf("\n");
+        //printf("\n");
         //printf("DEBUG: Total checks: %d\n", total_checks(work_units, NUM_THREADS));
-        printf("Total checks: %d\n", total_checks(work_units, NUM_THREADS));
+        printf("Total checks: %d\n\n", total_checks(work_units, NUM_THREADS));
     }
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("Time taken: %f seconds\n", cpu_time_used);
+    printf("Time taken with %d threads: %f seconds\n", NUM_THREADS, cpu_time_used);
 
+    //free(work_units);
+
+    start = clock();
+    NUM_THREADS = 12; // This can be adjusted as needed
+    //work_units = malloc(NUM_THREADS * sizeof(WorkUnit));
+
+    initialize(&g, work_units, NUM_THREADS);
+
+    for (int gen = 2; gen <= g.generations; gen++) {
+        printf("Generation %d with %d threads:\n", gen, NUM_THREADS);
+        parallel_update_grid(&g, NUM_THREADS);
+
+        print_grid(&g);
+        //printf("\n");
+        //printf("DEBUG: Total checks: %d\n", total_checks(work_units, NUM_THREADS));
+        printf("Total checks: %d\n\n", total_checks(work_units, NUM_THREADS));
+    }
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("Time taken with %d threads: %f seconds\n", NUM_THREADS, cpu_time_used);
+    //free(work_units);
     free_grid(&g);
     pthread_key_delete(thread_id_key);
     return 0;
@@ -199,8 +222,7 @@ void* thread_update_grid(void* arg) {
 
     for (int idx = work->start; idx <= work->end; idx++) {  // Changed to 'start' and 'end'
         int i, j;
-        //printf("DEBUG: Thread range: %d to %d\n", work->start, work->end);
-
+        //printf("Thread ID: %d, Start index: %d, End index: %d\n", work->thread_id, work->start, work->end);
         index_to_2d(idx, &i, &j, g->cols);
 
         //int sum = sum_neighbors(g, i, j, &work->checks);
@@ -228,6 +250,7 @@ int parallel_update_grid(Grid* g, int num_threads) {
         }
         work_units[t].thread_id = t;
         pthread_create(&threads[t], NULL, thread_update_grid, &work_units[t]);
+        printf("Thread ID: %d, Start index: %d, End index: %d\n", work_units[t].thread_id, work_units[t].start, work_units[t].end);
     }
 
     for (int t = 0; t < num_threads; t++) {
