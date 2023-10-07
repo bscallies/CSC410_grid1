@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <stdatomic.h>
+//#include <stdatomic.h>
 #include <time.h>
 
 //Brian S. Callies
@@ -20,11 +20,13 @@ typedef struct {
     int start;    // Start index for this thread's work
     int end;      // End index for this thread's work
     Grid* g;      // Pointer to the main grid structure
-    //int checks;   // Number of checks made by this thread
-    atomic_int checks;
+    int checks;   // Number of checks made by this thread
+    //atomic_int checks;
     int thread_id;
 } WorkUnit;
 pthread_key_t thread_id_key;
+pthread_mutex_t count_mutex;
+
 
 //Protofunctions
 void allocate_grid(Grid* g);
@@ -81,6 +83,7 @@ int main() {
     int NUM_THREADS = 4; // This can be adjusted as needed
     //WorkUnit work_units[NUM_THREADS];
     WorkUnit work_units[12];
+    pthread_mutex_t count_mutex;
     initialize(&g, work_units, 4);
 
     for (int gen = 2; gen <= g.generations; gen++) {
@@ -119,9 +122,11 @@ int main() {
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("Time taken with %d threads: %f seconds\n", NUM_THREADS, cpu_time_used);
+
     //free(work_units);
     free_grid(&g);
     pthread_key_delete(thread_id_key);
+    pthread_mutex_destroy(&count_mutex);
     return 0;
 }
 
@@ -129,21 +134,16 @@ int main() {
 
 int sum_neighbors(Grid* g, int i, int j, WorkUnit* work) {
     int sum = 0;
-
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
-            int ni = i + dx;  // neighbor's i-coordinate
-            int nj = j + dy;  // neighbor's j-coordinate
+            int ni = i + dx;
+            int nj = j + dy;
             if (ni >= 0 && ni < g->rows && nj >= 0 && nj < g->cols && !(dx == 0 && dy == 0)) {
-                //int tid = (int)(intptr_t)pthread_getspecific(thread_id_key);
-                //printf("DEBUG: Thread %d - Adding value from neighbor cell (%d, %d) to cell (%d, %d)\n", tid, ni, nj, i, j);
-
                 sum += g->grid[ni][nj];
-                //atomic_fetch_add(&work->checks, 1);
+                //printf("DEBUG: Thread %d - Adding value from neighbor cell (%d, %d) to cell (%d, %d)\n", tid, ni, nj, i, j);
             }
         }
     }
-    //atomic_fetch_add(&work->checks, 1);
     delay_based_on_sum(sum);
     return sum;
 }
@@ -157,11 +157,12 @@ void delay_based_on_sum(int sum) {
 int total_checks(WorkUnit* workUnits, int numThreads) {
     int total = 0;
     for (int i = 0; i < numThreads; i++) {
-        printf("DEBUG: (total_checks) Thread %d checks: %d\n", i, workUnits[i].checks);
+        printf("DEBUG: Thread %d checks: %d\n", i, workUnits[i].checks);
         total += workUnits[i].checks;
     }
     return total;
 }
+
 
 //grid.c functions
 void allocate_grid(Grid* g) {
@@ -230,7 +231,10 @@ void* thread_update_grid(void* arg) {
 
         //int sum = sum_neighbors(g, i, j, &work->checks);
         int sum = sum_neighbors(g, i, j, work);
-        atomic_fetch_add(&work->checks, 1);
+        //atomic_fetch_add(&work->checks, 1);
+        pthread_mutex_lock(&count_mutex);
+        work->checks++;
+        pthread_mutex_unlock(&count_mutex);
         g->grid[i][j] = update_cell_value(g->grid[i][j], sum);
     }
     //printf("DEBUG: Thread [%d - %d] performed %d checks\n", work->start, work->end, work->checks);
