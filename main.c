@@ -103,6 +103,9 @@ int main() {
     //work_units = malloc(NUM_THREADS * sizeof(WorkUnit));
 
     initialize(&g, work_units, NUM_THREADS);
+    for (int t = 0; t < NUM_THREADS; t++) {
+        work_units[t].checks = 0;
+    }
 
     for (int gen = 2; gen <= g.generations; gen++) {
         printf("Generation %d with %d threads:\n", gen, NUM_THREADS);
@@ -132,15 +135,15 @@ int sum_neighbors(Grid* g, int i, int j, WorkUnit* work) {
             int ni = i + dx;  // neighbor's i-coordinate
             int nj = j + dy;  // neighbor's j-coordinate
             if (ni >= 0 && ni < g->rows && nj >= 0 && nj < g->cols && !(dx == 0 && dy == 0)) {
-                int tid = (int)(intptr_t)pthread_getspecific(thread_id_key);
+                //int tid = (int)(intptr_t)pthread_getspecific(thread_id_key);
                 //printf("DEBUG: Thread %d - Adding value from neighbor cell (%d, %d) to cell (%d, %d)\n", tid, ni, nj, i, j);
 
                 sum += g->grid[ni][nj];
-                atomic_fetch_add(&work->checks, 1);
+                //atomic_fetch_add(&work->checks, 1);
             }
         }
     }
-
+    //atomic_fetch_add(&work->checks, 1);
     delay_based_on_sum(sum);
     return sum;
 }
@@ -154,7 +157,7 @@ void delay_based_on_sum(int sum) {
 int total_checks(WorkUnit* workUnits, int numThreads) {
     int total = 0;
     for (int i = 0; i < numThreads; i++) {
-        //printf("DEBUG: Thread %d checks: %d\n\n", i, workUnits[i].checks);
+        printf("DEBUG: (total_checks) Thread %d checks: %d\n", i, workUnits[i].checks);
         total += workUnits[i].checks;
     }
     return total;
@@ -227,6 +230,7 @@ void* thread_update_grid(void* arg) {
 
         //int sum = sum_neighbors(g, i, j, &work->checks);
         int sum = sum_neighbors(g, i, j, work);
+        atomic_fetch_add(&work->checks, 1);
         g->grid[i][j] = update_cell_value(g->grid[i][j], sum);
     }
     //printf("DEBUG: Thread [%d - %d] performed %d checks\n", work->start, work->end, work->checks);
@@ -242,6 +246,7 @@ int parallel_update_grid(Grid* g, int num_threads) {
     for (int t = 0; t < num_threads; t++) {
         work_units[t].g = g;
         work_units[t].start = t * cells_per_thread;  // Changed to 'start'
+        work_units[t].checks = ATOMIC_VAR_INIT(0);
 
         if (t == num_threads - 1) {
             work_units[t].end = (g->rows * g->cols) - 1;  // Changed to 'end'
